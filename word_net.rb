@@ -1,13 +1,48 @@
 require 'sqlite3'
 require "json"
 include SQLite3
+
 class WordNet
   Word = Struct.new('Word',:wordid, :lang, :lemma, :pron, :pos)
   Sense = Struct.new('Sense', :synset, :wordid, :lang, :rank, :lexid, :freq, :src)
   Synset = Struct.new( "Synset", :synset, :pos, :name, :src)
-  FILE_NAME = "./elastic_search_index.txt"
+
   def initialize
     @db = Database.new("./wnjpn.db")
+  end
+
+  public
+
+  def get_synonym(word, lang="jpn")
+    synonym = Hash.new
+    words = get_words(word)
+    words.each do |w|
+      senses = get_senses(w)
+      synonym.merge! get_words_from_senses(senses,lang)
+    end
+    return synonym.uniq
+  end
+
+  def get_hyponym(word, lang="jpn")
+    words = get_words(word)
+    hyponyms = []
+    words.each do |w|
+      senses = get_senses(w)
+      relates = (get_link_words_from_senses(senses, 'hypo', lang)-[word])
+      hyponyms += relates
+    end
+    return hyponyms.uniq
+  end
+
+  def get_hypernym(word, lang="jpn")
+    words = get_words(word)
+    hypernyms = []
+    words.each do |w|
+      senses = get_senses(w)
+      relates = (get_link_words_from_senses(senses, 'hype', lang)-[word])
+      hypernyms += relates
+    end
+    return hypernyms.uniq
   end
 
   def close
@@ -80,39 +115,4 @@ class WordNet
     end
     return synonym
   end
-
-  public
-
-  def get_synonym(word, lang="jpn")
-    synonym = Hash.new
-    words = get_words(word)
-    words.each do |w|
-      senses = get_senses(w)
-      synonym.merge! get_words_from_senses(senses,lang)
-    end
-    return synonym.uniq
-  end
-
-  def get_hyponym(word, lang="jpn")
-    words = get_words(word)
-    hyponyms = []
-    words.each do |w|
-      senses = get_senses(w)
-      relates = (get_link_words_from_senses(senses, 'hypo', lang)-[word])
-      hyponyms += relates
-    end
-    return hyponyms.uniq
-  end
-
-  def get_hypernym(word, lang="jpn")
-    words = get_words(word)
-    hypernyms = []
-    words.each do |w|
-      senses = get_senses(w)
-      relates = (get_link_words_from_senses(senses, 'hype', lang)-[word])
-      hypernyms += relates
-    end
-    return hypernyms.uniq
-  end
-
 end
